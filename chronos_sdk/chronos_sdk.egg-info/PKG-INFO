@@ -1,0 +1,6 @@
+Metadata-Version: 2.1
+Name: chronos_sdk
+Version: 0.1.0
+Summary: The Transparent Interceptor SDK for Project Chronos
+Author: Project Chronos Architect
+Requires-Python: >=3.8

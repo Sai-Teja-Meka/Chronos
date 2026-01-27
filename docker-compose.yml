@@ -1,0 +1,79 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: chronos_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-chronos_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-chronos_password}
+      POSTGRES_DB: ${POSTGRES_DB:-chronos}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Schema initialization (runs on FIRST init of the volume)
+      - ./backend/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./backend/db/fix_indexes.sql:/docker-entrypoint-initdb.d/02-fix_indexes.sql
+      - ./backend/db/add_snapshot_optimization.sql:/docker-entrypoint-initdb.d/03-snapshot-schema.sql
+      - ./backend/db/auto_snapshot_trigger.sql:/docker-entrypoint-initdb.d/04-snapshot-trigger.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-chronos_user} -d ${POSTGRES_DB:-chronos}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  chronos-redis:
+    image: redis:7-alpine
+    container_name: chronos_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: chronos_backend
+    restart: always
+    volumes:
+      - ./backend:/app
+    environment:
+      PUBLIC_DEMO_MODE: "true"
+      DATABASE_URL: postgresql://chronos_user:chronos_password@db:5432/chronos
+      REDIS_URL: redis://chronos-redis:6379
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      CHRONOS_API_KEYS: ${CHRONOS_API_KEYS}
+      CHRONOS_CORS_ORIGINS: ${CHRONOS_CORS_ORIGINS:-http://localhost:3000,http://localhost:5173}
+      CHRONOS_ADMIN_PASSWORD: ${CHRONOS_ADMIN_PASSWORD}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      chronos-redis:
+        condition: service_healthy
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: chronos_pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@chronos.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-change_me}
+    ports:
+      - "5050:80"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:

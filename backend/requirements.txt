@@ -1,0 +1,24 @@
+# Core API
+fastapi==0.109.2
+uvicorn[standard]==0.27.1
+pydantic==2.6.1
+pydantic-settings==2.1.0
+
+# Database
+psycopg2-binary==2.9.9
+python-dotenv==1.0.1
+
+# Utilities
+# (none currently required beyond stdlib, but requests usually helpful)
+requests==2.31.0
+
+# Development / Testing
+pytest==8.0.0
+httpx==0.26.0
+black==24.1.1
+mypy==1.8.0
+types-requests==2.31.0.20240125
+types-psycopg2==2.9.21.20240218
+openai>=1.0.0
+slowapi==0.1.9
+redis==5.0.1
