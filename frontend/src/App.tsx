@@ -5,7 +5,7 @@ import TraceViewer from './components/TraceViewer';
 function App() {
   // The ID used in the "Backend Completion Checkpoint" POST example
   // Ensure this matches the conversation_id you inserted via curl!
-  const DEMO_CONVERSATION_ID = "550e8400-e29b-41d4-a716-446655440099";
+  const DEMO_CONVERSATION_ID = "5e43fb35-d34f-43c1-b69c-d751e2c34529";
 
   return (
     // FIX #2: Ensure the root App component fills the entire viewport
