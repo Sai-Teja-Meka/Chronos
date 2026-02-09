@@ -337,11 +337,20 @@ def get_conversation_graph(
     conversation_id_str = security_validator.validate_conversation_id(str(conversation_id))
     
     query = """
-        SELECT * FROM events 
-        WHERE conversation_id = %s 
-        ORDER BY sequence_number ASC
-        LIMIT %s OFFSET %s
-    """
+SELECT
+  event_id,
+  parent_event_id,
+  sequence_number,
+  event_type,
+  payload,
+  metadata,
+  created_at
+  FROM events
+  WHERE conversation_id = %s
+  ORDER BY created_at ASC, sequence_number ASC
+  LIMIT %s OFFSET %s
+  """
+
     
     nodes = []
     edges = []
@@ -362,7 +371,8 @@ def get_conversation_graph(
                         "label": row['event_type'],
                         "payload": row['payload'],
                         "metadata": row['metadata'],
-                        "sequence": row['sequence_number']
+                        "sequence": row['sequence_number'],
+                        "created_at": row["created_at"].isoformat() if row.get("created_at") else None,
                     },
                     position={"x": 0, "y": 0} 
                 )
@@ -378,6 +388,8 @@ def get_conversation_graph(
 
         return GraphResponse(nodes=nodes, edges=edges)
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"❌ Graph fetch failed: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
