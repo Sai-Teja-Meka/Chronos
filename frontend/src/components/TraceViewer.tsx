@@ -90,6 +90,7 @@ const TraceViewer: React.FC<TraceViewerProps> = ({ conversationId }) => {
 
   const [showTimeline, setShowTimeline] = useState(false);
   const [playbackIndex, setPlaybackIndex] = useState(0);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [allNodes, setAllNodes] = useState<ChronosNode[]>([]);
   const [activePath, setActivePath] = useState<Set<string>>(new Set());
@@ -288,10 +289,10 @@ const TraceViewer: React.FC<TraceViewerProps> = ({ conversationId }) => {
         }
         return prev + 1;
       });
-    }, 1000);
+    }, 1000 / playbackSpeed); // Dynamic interval based on speed
 
     return () => clearInterval(interval);
-  }, [isPlaying, allNodes.length]);
+  }, [isPlaying, allNodes.length, playbackSpeed]);
 
   const getVisibleNodes = useCallback(() => {
     if (!showTimeline) return nodes;
@@ -627,6 +628,7 @@ const TraceViewer: React.FC<TraceViewerProps> = ({ conversationId }) => {
           currentIndex={playbackIndex}
           totalSteps={allNodes.length}
           isPlaying={isPlaying}
+          playbackSpeed={playbackSpeed}
           onPlay={() => setIsPlaying(true)}
           onPause={() => setIsPlaying(false)}
           onReset={() => {
@@ -636,6 +638,7 @@ const TraceViewer: React.FC<TraceViewerProps> = ({ conversationId }) => {
           onStepBack={() => setPlaybackIndex(v => Math.max(0, v - 1))}
           onStepForward={() => setPlaybackIndex(v => Math.min(allNodes.length - 1, v + 1))}
           onSeek={setPlaybackIndex}
+          onSpeedChange={setPlaybackSpeed}
         />
       )}
 
