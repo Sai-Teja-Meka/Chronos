@@ -124,7 +124,7 @@ class ChronosInterceptor:
                 
                 # C. Handle Standard Response
                 latency_ms = (time.time() - start_time) * 1000
-                self._capture_assistant_event(response, assistant_event_id, latency_ms)
+                self._capture_assistant_event(response, assistant_event_id, latency_ms, model)
                 return response
                 
             except Exception as e:
@@ -151,7 +151,14 @@ class ChronosInterceptor:
                     }]
                 }
                 # Root event has no parent
-                self._enqueue_event(event_id, "system_message", payload, {}, is_root=True)
+                self._enqueue_event(
+    event_id,
+    "system_message",
+    payload,
+    {"gen_ai.model": model, "gen_ai.provider.name": "openai"},
+    is_root=True
+            )
+
                 break
 
     def _process_input_messages(self, messages: List[Dict], trigger_event_id: str, model: str):
@@ -172,7 +179,13 @@ class ChronosInterceptor:
                     }]
                 }]
             }
-            self._enqueue_event(trigger_event_id, "tool_result", payload, {"status": "success"})
+            self._enqueue_event(
+    trigger_event_id,
+    "tool_result",
+    payload,
+    {"status": "success", "gen_ai.model": model, "gen_ai.provider.name": "openai"}
+)
+
 
         else:
             otel_role = last_msg.get('role', 'user')
@@ -183,7 +196,13 @@ class ChronosInterceptor:
                     "parts": [{"type": "text", "text": last_msg.get("content")}]
                 }]
             }
-            self._enqueue_event(trigger_event_id, "user_message", payload, {})
+            self._enqueue_event(
+    trigger_event_id,
+    "user_message",
+    payload,
+    {"gen_ai.model": model, "gen_ai.provider.name": "openai"}
+)
+
 
     def _handle_streaming_response(self, response_generator, event_id: str, model: str, start_time: float):
         full_content = []
@@ -230,16 +249,18 @@ class ChronosInterceptor:
                 "gen_ai.output.messages": [{"role": "assistant", "finish_reason": "tool_calls", "parts": parts}],
                 "gen_ai.tool.name": top_name 
             }
-            self._enqueue_event(event_id, "tool_call", payload, {"latency_ms": latency_ms, "streamed": True})
+            self._enqueue_event(event_id, "tool_call", payload, {"latency_ms": latency_ms, "streamed": True, "gen_ai.model": model, "gen_ai.provider.name": "openai"}
+)
 
         elif combined_text:
             payload = {
                 "gen_ai.operation.name": "chat",
                 "gen_ai.output.messages": [{"role": "assistant", "finish_reason": finish_reason, "parts": [{"type": "text", "text": combined_text}]}]
             }
-            self._enqueue_event(event_id, "assistant_message", payload, {"latency_ms": latency_ms, "streamed": True})
+            self._enqueue_event(event_id, "assistant_message", payload, {"latency_ms": latency_ms, "streamed": True, "gen_ai.model": model, "gen_ai.provider.name": "openai"}
+)
 
-    def _capture_assistant_event(self, response, event_id: str, latency_ms: float):
+    def _capture_assistant_event(self, response, event_id: str, latency_ms: float, model: str):
         choice = response.choices[0]
         message = choice.message
         
@@ -260,14 +281,16 @@ class ChronosInterceptor:
                 "gen_ai.output.messages": [{"role": "assistant", "finish_reason": "tool_calls", "parts": parts}],
                 "gen_ai.tool.name": top_name
             }
-            self._enqueue_event(event_id, "tool_call", payload, {"latency_ms": latency_ms})
+            self._enqueue_event(event_id, "tool_call", payload, {"latency_ms": latency_ms, "gen_ai.model": model, "gen_ai.provider.name": "openai"}
+)
 
         else:
             payload = {
                 "gen_ai.operation.name": "chat",
                 "gen_ai.output.messages": [{"role": "assistant", "finish_reason": choice.finish_reason, "parts": [{"type": "text", "text": message.content}]}]
             }
-            self._enqueue_event(event_id, "assistant_message", payload, {"latency_ms": latency_ms})
+            self._enqueue_event(event_id, "assistant_message", payload, {"latency_ms": latency_ms, "gen_ai.model": model, "gen_ai.provider.name": "openai"}
+)
 
     def _capture_error_event(self, error: Exception, input_messages: List[Dict]):
         event_id = str(uuid.uuid4())
@@ -279,7 +302,13 @@ class ChronosInterceptor:
             "error.message": str(error),
             "gen_ai.input.messages": otel_inputs
         }
-        self._enqueue_event(event_id, "error", payload, {})
+        self._enqueue_event(
+    event_id,
+    "error",
+    payload,
+    {"gen_ai.model": "unknown", "gen_ai.provider.name": "openai"}
+)
+
 
     # ==========================================
     # ⚙️ INTERNAL UTILS

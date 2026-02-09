@@ -22,3 +22,4 @@ types-psycopg2==2.9.21.20240218
 openai>=1.0.0
 slowapi==0.1.9
 redis==5.0.1
+anthropic

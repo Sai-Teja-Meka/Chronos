@@ -1,0 +1,30 @@
+[
+    {
+        "event_id": "875b0418-b3c9-4aef-8406-77d6738b7142",
+        "conversation_id": "875b0418-b3c9-4aef-8406-77d6738b7142",
+        "parent_event_id": null,
+        "sequence_number": 1,
+        "event_type": "user_message",
+        "payload": {
+            "content": "Hello Chronos"
+        },
+        "metadata": {
+            "source": "manual"
+        },
+        "created_at": "2026-01-27T16:15:00Z"
+    },
+    {
+        "event_id": "875b0418-b3c9-4aef-8406-77d6738b7142",
+        "conversation_id": "875b0418-b3c9-4aef-8406-77d6738b7142",
+        "parent_event_id": "875b0418-b3c9-4aef-8406-77d6738b7142",
+        "sequence_number": 2,
+        "event_type": "assistant_message",
+        "payload": {
+            "content": "Hi! I am tracing this conversation."
+        },
+        "metadata": {
+            "model": "demo"
+        },
+        "created_at": "2026-01-27T16:15:05Z"
+    }
+]

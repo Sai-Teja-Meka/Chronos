@@ -345,13 +345,12 @@ SELECT
   payload,
   metadata,
   created_at
-  FROM events
-  WHERE conversation_id = %s
-  ORDER BY created_at ASC, sequence_number ASC
-  LIMIT %s OFFSET %s
-  """
 
-    
+FROM events
+WHERE conversation_id = %s
+ORDER BY created_at ASC, sequence_number ASC
+LIMIT %s OFFSET %s
+"""
     nodes = []
     edges = []
     

@@ -1,6 +1,6 @@
 import { type Node, type Edge } from 'reactflow';
 
-const API_BASE = import.meta.env.VITE_API_URL || '';;
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 // 🛡️ Get API key from environment variable
 const API_KEY = import.meta.env.VITE_CHRONOS_API_KEY || '';
@@ -20,7 +20,6 @@ export interface GraphResponse {
 
 export interface ForkRequest {
   parent_event_id: string;
-  new_prompt?: string;
   mutation_type?: 'user_message' | 'system_message' | 'assistant_message' | 'tool_result';
   content?: string;
   tool_call_id?: string;
@@ -48,7 +47,7 @@ const getAuthHeaders = (additionalHeaders: HeadersInit = {}): HeadersInit => {
 // 🛡️ Helper function to handle API errors
 const handleApiError = (response: Response, error?: any): never => {
   if (response.status === 401) {
-    throw new Error("This action is disabled in the public demo.");
+    throw new Error("Invalid or missing API key");
   }
   if (response.status === 429) {
     throw new Error('Rate limit exceeded. Please wait before retrying.');

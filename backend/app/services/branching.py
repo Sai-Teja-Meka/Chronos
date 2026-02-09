@@ -5,6 +5,7 @@ import logging
 import threading
 import time
 import copy  # 🟢 ADDED: Required for deep copy fix
+import requests
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
@@ -24,20 +25,60 @@ class BranchingService:
         self.replay_engine = ReplayEngine(self.db_dsn, snapshot_interval=50)
         
         # Strict API Key Validation
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            raise ValueError(
-                "CRITICAL: OPENAI_API_KEY is missing. "
-                "Please set it in your .env file to enable Branching."
-            )
-        
-        if not api_key.startswith("sk-"):
-             raise ValueError(
-                "CRITICAL: Invalid OPENAI_API_KEY format. "
-                "Key must start with 'sk-'."
-            )
+        self.openai_client = None
+        openai_key = os.getenv("OPENAI_API_KEY")
+        if openai_key:
+            if not openai_key.startswith("sk-"):
+                raise ValueError(
+                    "CRITICAL: Invalid OPENAI_API_KEY format. "
+                    "Key must start with 'sk-'."
+                )
+            self.openai_client = OpenAI(api_key=openai_key)
 
-        self.client = OpenAI(api_key=api_key)
+        # Claude key (required only if a Claude model is requested)
+        self.anthropic_key = os.getenv("ANTHROPIC_API_KEY")
+
+    def _is_claude_model(self, model: str) -> bool:
+        return model.startswith("claude-")
+
+    def _call_claude_messages(self, model: str, messages: List[Dict[str, Any]]) -> Dict[str, Any]:
+        if not self.anthropic_key:
+            raise ValueError("ANTHROPIC_API_KEY is missing. Set it to run Claude models.")
+        
+        # Convert OpenAI-style messages to Claude Messages API shape (minimal text-only)
+        claude_messages = []
+        system_text = None
+        
+        for m in messages:
+            role = m.get("role")
+            if role == "system":
+                # Claude supports a top-level system string; keep last system message
+                system_text = m.get("content") or ""
+            elif role in ("user", "assistant"):
+                claude_messages.append({"role": role, "content": m.get("content") or ""})
+            # NOTE: tool role/tool_calls not supported in this minimal version
+            
+        payload: Dict[str, Any] = {
+            "model": model,
+            "max_tokens": 1024,
+            "messages": claude_messages,
+        }
+
+        if system_text:
+            payload["system"] = system_text
+
+        r = requests.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "x-api-key": self.anthropic_key,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json",
+            },
+            json=payload,
+            timeout=60,
+        )
+        r.raise_for_status()
+        return r.json()
 
     # Add this to branching.py - Enhanced fork_conversation method
     def fork_conversation_advanced(
@@ -78,7 +119,8 @@ class BranchingService:
         # 3. Create mutation event based on type
         now = datetime.utcnow().isoformat() + "Z"
         mutation_event_id = str(uuid.uuid4())
-        
+        provider = "anthropic" if self._is_claude_model(model) else "openai"
+
         if mutation_type == 'user_message':
             # Standard user message
             mutation_event = {
@@ -88,13 +130,20 @@ class BranchingService:
                 'sequence_number': parent_seq + 1,
                 'event_type': 'user_message',
                 'payload': {
+                    'gen_ai.provider.name': provider,
                     'gen_ai.operation.name': 'chat',
                     'gen_ai.input.messages': [{
                         'role': 'user',
                         'parts': [{'type': 'text', 'text': content}]
                     }]
                 },
-                'metadata': {'mutation': True, 'mutation_type': 'user_message'},
+                'metadata': {
+  'mutation': True,
+  'mutation_type': 'user_message',
+  'gen_ai.model': model,
+  'gen_ai.provider.name': 'anthropic' if self._is_claude_model(model) else 'openai',
+},
+
                 'created_at': now
             }
             
@@ -110,13 +159,19 @@ class BranchingService:
                 'sequence_number': parent_seq + 1,
                 'event_type': 'system_message',
                 'payload': {
+                    'gen_ai.provider.name': provider,
                     'gen_ai.operation.name': 'chat',
                     'gen_ai.input.messages': [{
                         'role': 'system',
                         'parts': [{'type': 'text', 'text': content}]
                     }]
                 },
-                'metadata': {'mutation': True, 'mutation_type': 'system_message'},
+                'metadata': {
+  'mutation': True,
+  'mutation_type': 'system_message',  
+  'gen_ai.model': model,
+  'gen_ai.provider.name': 'anthropic' if self._is_claude_model(model) else 'openai',
+},
                 'created_at': now
             }
             
@@ -134,6 +189,7 @@ class BranchingService:
                 'sequence_number': parent_seq + 1,
                 'event_type': 'assistant_message',
                 'payload': {
+                    'gen_ai.provider.name': provider,
                     'gen_ai.operation.name': 'chat',
                     'gen_ai.output.messages': [{
                         'role': 'assistant',
@@ -141,7 +197,7 @@ class BranchingService:
                         'parts': [{'type': 'text', 'text': content}]
                     }]
                 },
-                'metadata': {'mutation': True, 'mutation_type': 'assistant_message'},
+                'metadata': {'mutation': True, 'gen_ai.model': model, 'mutation_type': 'assistant_message'},
                 'created_at': now
             }
             
@@ -153,6 +209,9 @@ class BranchingService:
             # Simulate tool execution result
             if not tool_call_id:
                 raise ValueError("tool_call_id required for tool_result mutation")
+            
+            if self._is_claude_model(model):
+                raise ValueError("tool_result forks are not supported for Claude yet (needs tool_use/tool_result mapping).")
             
             # CRITICAL FIX: OpenAI requires a tool_call message BEFORE tool_result
             # We need to inject a fake tool_call first, then the tool_result
@@ -167,7 +226,7 @@ class BranchingService:
                 'event_type': 'tool_call',
                 'payload': {
                     'gen_ai.operation.name': 'chat',
-                    'gen_ai.provider.name': 'openai',
+                    'gen_ai.provider.name': 'anthropic' if self._is_claude_model(model) else 'openai',
                     'gen_ai.tool.name': tool_name or 'simulated_tool',
                     'gen_ai.output.messages': [{
                         'role': 'assistant',
@@ -183,7 +242,9 @@ class BranchingService:
                 'metadata': {
                     'mutation': True,
                     'mutation_type': 'tool_call_injected',
-                    'injected_for_tool_result': True
+                    'injected_for_tool_result': True,
+                    'gen_ai.model': model,
+                    'gen_ai.provider.name': 'anthropic' if self._is_claude_model(model) else 'openai',
                 },
                 'created_at': now
             }
@@ -196,6 +257,7 @@ class BranchingService:
                 'sequence_number': parent_seq + 2,  # One step after tool_call
                 'event_type': 'tool_result',
                 'payload': {
+                    'gen_ai.provider.name': provider,
                     'gen_ai.operation.name': 'execute_tool',
                     'gen_ai.tool.call.id': tool_call_id,
                     'gen_ai.tool.name': tool_name or 'simulated_tool',
@@ -211,7 +273,9 @@ class BranchingService:
                 'metadata': {
                     'mutation': True, 
                     'mutation_type': 'tool_result',
-                    'status': 'simulated'
+                    'status': 'simulated',
+                    'gen_ai.model': model,
+                    'gen_ai.provider.name': 'anthropic' if self._is_claude_model(model) else 'openai',
                 },
                 'created_at': now
             }
@@ -246,15 +310,41 @@ class BranchingService:
             logger.info(f"Forking conversation with {mutation_type} mutation")
             
             try:
-                # Call LLM with mutated history
-                response = self.client.chat.completions.create(
-                    model=model,
-                    messages=new_messages,
-                    stream=False
-                )
+                t0 = time.time()
+                assistant_text = ""
+                finish_reason = "stop"
+                usage_in = 0
+                usage_out = 0
+
+                if self._is_claude_model(model):
+                    provider = "anthropic"
+                    data = self._call_claude_messages(model, new_messages)
+                    # Claude content is a list of blocks; join text blocks
+                    content_blocks = data.get("content", [])
+                    assistant_text = "".join(
+                        b.get("text", "") for b in content_blocks if b.get("type") == "text"
+                    )
+                    # Best-effort fields (may vary)
+                    finish_reason = data.get("stop_reason") or "stop"
+                    usage = data.get("usage") or {}
+                    usage_in = usage.get("input_tokens", 0) or 0
+                    usage_out = usage.get("output_tokens", 0) or 0
+                else:
+                    if not self.openai_client:
+                        raise ValueError("OPENAI_API_KEY is missing but an OpenAI model was requested.")
+                    response = self.openai_client.chat.completions.create(
+                        model=model,
+                        messages=new_messages,
+                        stream=False
+                    )
+                    assistant_text = response.choices[0].message.content
+                    finish_reason = response.choices[0].finish_reason
+                    usage_in = response.usage.prompt_tokens
+                    usage_out = response.usage.completion_tokens
+                
+                latency_ms = int((time.time() - t0) * 1000)
                 
                 # Create assistant response event
-                assistant_text = response.choices[0].message.content
                 assistant_event_id = str(uuid.uuid4())
                 assistant_event = {
                     'event_id': assistant_event_id,
@@ -264,16 +354,20 @@ class BranchingService:
                     'sequence_number': parent_seq + 2 if mutation_type != 'tool_result' else parent_seq + 3,  # tool_result needs +3 (call, result, assistant)
                     'event_type': 'assistant_message',
                     'payload': {
+                        'gen_ai.provider.name': provider,
                         'gen_ai.operation.name': 'chat',
                         'gen_ai.output.messages': [{
                             'role': 'assistant',
-                            'finish_reason': response.choices[0].finish_reason,
+                            'finish_reason': finish_reason,
                             'parts': [{'type': 'text', 'text': assistant_text}]
                         }]
                     },
                     'metadata': {
-                        'gen_ai.usage.input_tokens': response.usage.prompt_tokens,
-                        'gen_ai.usage.output_tokens': response.usage.completion_tokens,
+                        'gen_ai.model': model,
+                        'gen_ai.provider.name': provider,
+                        'gen_ai.usage.input_tokens': usage_in,
+                        'gen_ai.usage.output_tokens': usage_out,
+                        'latency_ms': latency_ms,
                         'in_response_to_mutation': True
                     },
                     'created_at': now

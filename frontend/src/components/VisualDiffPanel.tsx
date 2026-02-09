@@ -95,7 +95,7 @@ const VisualDiffPanel: React.FC<VisualDiffPanelProps> = ({
             />
 
             {/* Panel - Simple fixed height approach */}
-            <div className="relative w-full max-w-6xl bg-white rounded-2xl shadow-2xl overflow-hidden" style={{ height: '85vh' }}>
+            <div className="relative w-full max-w-6xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col" style={{ height: '85vh' }} onWheelCapture={(e) => e.stopPropagation()} onTouchMoveCapture={(e) => e.stopPropagation()}>
 
                 {/* Header */}
                 <div className="px-6 py-4 bg-gradient-to-r from-purple-50 to-blue-50 border-b border-gray-200">
@@ -166,11 +166,11 @@ const VisualDiffPanel: React.FC<VisualDiffPanelProps> = ({
                 )}
 
                 {/* 🎯 SIMPLE SOLUTION: Just use a div with fixed height and overflow */}
-                <div style={{ height: 'calc(85vh - 280px)' }}>
-                    <div className="grid grid-cols-2 h-full">
+                <div className="flex-1 min-h-0">
+                    <div className="grid grid-cols-2 h-full min-h-0">
 
                         {/* Branch A - Left Column */}
-                        <div className="border-r border-gray-200 h-full flex flex-col">
+                        <div className="border-r border-gray-200 h-full min-h-0 flex flex-col">
                             <div className="px-6 py-3 bg-blue-50 border-b border-blue-200">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
@@ -184,7 +184,7 @@ const VisualDiffPanel: React.FC<VisualDiffPanelProps> = ({
                             </div>
 
                             {/* 🎯 SCROLLABLE - Simple overflow-y-auto with explicit height */}
-                            <div className="overflow-y-auto px-6 py-4" style={{ height: 'calc(100% - 56px)' }}>
+                            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 py-4">
                                 {branchADiffs.length === 0 ? (
                                     <div className="text-center text-gray-400 italic py-8">
                                         No changes in this branch
@@ -196,7 +196,7 @@ const VisualDiffPanel: React.FC<VisualDiffPanelProps> = ({
                         </div>
 
                         {/* Branch B - Right Column */}
-                        <div className="h-full flex flex-col">
+                        <div className="h-full min-h-0 flex flex-col">
                             <div className="px-6 py-3 bg-purple-50 border-b border-purple-200">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
@@ -210,7 +210,7 @@ const VisualDiffPanel: React.FC<VisualDiffPanelProps> = ({
                             </div>
 
                             {/* 🎯 SCROLLABLE - Simple overflow-y-auto with explicit height */}
-                            <div className="overflow-y-auto px-6 py-4" style={{ height: 'calc(100% - 56px)' }}>
+                            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 py-4">
                                 {branchBDiffs.length === 0 ? (
                                     <div className="text-center text-gray-400 italic py-8">
                                         No changes in this branch
