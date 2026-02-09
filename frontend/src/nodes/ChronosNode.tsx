@@ -2,8 +2,8 @@ import React, { memo, useState, useEffect, useRef } from 'react';
 import { Handle, Position } from 'reactflow';
 import type { NodeProps } from 'reactflow';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  User, Bot, Wrench, AlertTriangle, Clock, Coins, GitBranch 
+import {
+  User, Bot, Wrench, AlertTriangle, Clock, Coins, GitBranch
 } from 'lucide-react';
 import type { Variants } from 'framer-motion';
 
@@ -34,43 +34,43 @@ interface ChronosNodeData {
 const getNodeStyles = (eventType: string) => {
   switch (eventType) {
     case 'user_message':
-      return { 
-        borderColor: 'border-blue-500', 
-        bgHeader: 'bg-blue-100', 
-        textColor: 'text-blue-800', 
+      return {
+        borderColor: 'border-blue-500',
+        bgHeader: 'bg-blue-100',
+        textColor: 'text-blue-800',
         Icon: User,
         glowColor: 'rgba(59, 130, 246, 0.6)'
       };
     case 'assistant_message':
-      return { 
-        borderColor: 'border-purple-500', 
-        bgHeader: 'bg-purple-100', 
-        textColor: 'text-purple-800', 
+      return {
+        borderColor: 'border-purple-500',
+        bgHeader: 'bg-purple-100',
+        textColor: 'text-purple-800',
         Icon: Bot,
         glowColor: 'rgba(168, 85, 247, 0.6)'
       };
     case 'tool_call':
     case 'tool_result':
-      return { 
-        borderColor: 'border-green-600', 
-        bgHeader: 'bg-green-100', 
-        textColor: 'text-green-800', 
+      return {
+        borderColor: 'border-green-600',
+        bgHeader: 'bg-green-100',
+        textColor: 'text-green-800',
         Icon: Wrench,
         glowColor: 'rgba(22, 163, 74, 0.6)'
       };
     case 'error':
-      return { 
-        borderColor: 'border-red-500', 
-        bgHeader: 'bg-red-100', 
-        textColor: 'text-red-800', 
+      return {
+        borderColor: 'border-red-500',
+        bgHeader: 'bg-red-100',
+        textColor: 'text-red-800',
         Icon: AlertTriangle,
         glowColor: 'rgba(239, 68, 68, 0.6)'
       };
     default:
-      return { 
-        borderColor: 'border-gray-400', 
-        bgHeader: 'bg-gray-100', 
-        textColor: 'text-gray-800', 
+      return {
+        borderColor: 'border-gray-400',
+        bgHeader: 'bg-gray-100',
+        textColor: 'text-gray-800',
         Icon: Clock,
         glowColor: 'rgba(156, 163, 175, 0.6)'
       };
@@ -93,25 +93,44 @@ const getNodeSize = (eventType: string) => {
 
 // ✨ NEW: Extract text for preview
 const extractPreviewText = (payload: any): string => {
+  // Handle simple format (direct content field)
+  if (payload.content) {
+    const content = typeof payload.content === 'string'
+      ? payload.content
+      : JSON.stringify(payload.content);
+    return content.length > 100 ? content.substring(0, 100) + '...' : content;
+  }
+
+  // Handle OpenTelemetry format (gen_ai.input.messages)
   const messages = payload["gen_ai.input.messages"] || payload["gen_ai.output.messages"];
-  
+
   if (!messages || messages.length === 0) return 'No content';
-  
+
   const lastMsg = messages[messages.length - 1];
   const parts = lastMsg.parts || [];
-  
+
   const text = parts
     .filter((p: OTelPart) => p.type === 'text')
     .map((p: OTelPart) => p.text)
     .join(' ');
-  
-  // Truncate to 100 chars for preview
+
   return text.length > 100 ? text.substring(0, 100) + '...' : text;
 };
 
 const renderContent = (data: ChronosNodeData) => {
   const { payload, label } = data;
-  
+
+  // Handle simple content format FIRST
+  if (payload.content) {
+    return (
+      <div className="p-3 text-sm text-gray-700 whitespace-pre-wrap">
+        {typeof payload.content === 'string'
+          ? payload.content
+          : JSON.stringify(payload.content, null, 2)}
+      </div>
+    );
+  }
+
   if (label === 'error') {
     return (
       <div className="text-red-600 font-mono text-sm p-2">
@@ -119,15 +138,15 @@ const renderContent = (data: ChronosNodeData) => {
       </div>
     );
   }
-  
+
   const messages = payload["gen_ai.input.messages"] || payload["gen_ai.output.messages"];
-  
+
   if (!messages || messages.length === 0) {
     return (
       <div className="text-gray-400 italic p-2">No Content</div>
     );
   }
-  
+
   const lastMsg = messages[messages.length - 1];
   const parts = lastMsg.parts || [];
 
@@ -141,7 +160,7 @@ const renderContent = (data: ChronosNodeData) => {
             </div>
           );
         }
-        
+
         if (part.type === 'tool_use') {
           return (
             <div key={idx} className="bg-slate-50 border border-slate-200 rounded p-2 font-mono text-xs">
@@ -154,7 +173,7 @@ const renderContent = (data: ChronosNodeData) => {
             </div>
           );
         }
-        
+
         if (part.type === 'tool_result') {
           // Extract and parse content
           let displayContent = part.content;
@@ -188,7 +207,7 @@ const renderContent = (data: ChronosNodeData) => {
             </div>
           );
         }
-        
+
         return null;
       })}
     </div>
@@ -207,7 +226,7 @@ const ChronosNode = ({ id, data }: NodeProps<ChronosNodeData>) => {
   const calculateHeight = () => {
     const payload = data.payload || {};
     let textContent = '';
-    
+
     if (payload['gen_ai.input.messages']?.length > 0) {
       const msg = payload['gen_ai.input.messages'][0];
       textContent = msg.parts?.[0]?.text || '';
@@ -215,17 +234,17 @@ const ChronosNode = ({ id, data }: NodeProps<ChronosNodeData>) => {
       const msg = payload['gen_ai.output.messages'][0];
       textContent = msg.parts?.[0]?.text || '';
     }
-    
+
     const CHARS_PER_LINE = 40;
     const LINE_HEIGHT = 20;
     const HEADER_HEIGHT = 40;
     const FOOTER_HEIGHT = data.metadata?.latency_ms ? 24 : 0;
     const PADDING = 16;
-    
+
     const estimatedLines = Math.max(2, Math.ceil(textContent.length / CHARS_PER_LINE));
     const bodyHeight = Math.min(estimatedLines * LINE_HEIGHT + PADDING, 280);
     const totalHeight = HEADER_HEIGHT + bodyHeight + FOOTER_HEIGHT;
-    
+
     return Math.max(120, Math.min(totalHeight, 400));
   };
 
@@ -273,14 +292,14 @@ const ChronosNode = ({ id, data }: NodeProps<ChronosNodeData>) => {
   };
 
   const isActive = data.isOnActivePath ?? false;
-  
+
   const nodeVariants: Variants = {
-    hidden: { 
-      opacity: 0, 
+    hidden: {
+      opacity: 0,
       scale: 0.8,
       y: -20
     },
-    visible: { 
+    visible: {
       opacity: isActive ? 1 : 0.65,
       scale: 1,
       y: 0,
@@ -311,16 +330,15 @@ const ChronosNode = ({ id, data }: NodeProps<ChronosNodeData>) => {
       variants={nodeVariants}
       initial="hidden"
       animate="visible"
-      whileHover={{ 
+      whileHover={{
         scale: 1.02,
         transition: { duration: 0.2 }
       }}
       onMouseEnter={handleMouseEnter} // ✨ NEW
       onMouseLeave={handleMouseLeave} // ✨ NEW
-      className={`shadow-md rounded-lg bg-white border-2 overflow-visible relative ${styles.borderColor} ${
-        isActive ? 'ring-2 ring-cyan-400 ring-opacity-50' : ''
-      }`}
-      style={{ 
+      className={`shadow-md rounded-lg bg-white border-2 overflow-visible relative ${styles.borderColor} ${isActive ? 'ring-2 ring-cyan-400 ring-opacity-50' : ''
+        }`}
+      style={{
         width: `${size.width}px`,
         height: `${nodeHeight}px`,
         minHeight: '120px',
@@ -360,7 +378,7 @@ const ChronosNode = ({ id, data }: NodeProps<ChronosNodeData>) => {
       </AnimatePresence>
 
       {/* HEADER */}
-      <div 
+      <div
         className={`flex items-center justify-between px-3 py-2 border-b ${styles.bgHeader} ${styles.borderColor}`}
         style={{ height: '40px' }}
       >
@@ -374,9 +392,9 @@ const ChronosNode = ({ id, data }: NodeProps<ChronosNodeData>) => {
       </div>
 
       {/* BODY */}
-      <div 
+      <div
         className="overflow-y-auto"
-        style={{ 
+        style={{
           height: `${bodyHeight}px`,
           maxHeight: '280px'
         }}
@@ -386,7 +404,7 @@ const ChronosNode = ({ id, data }: NodeProps<ChronosNodeData>) => {
 
       {/* FOOTER */}
       {hasFooter && (
-        <div 
+        <div
           className="flex gap-3 px-3 py-1 bg-gray-50 border-t border-gray-100 text-[10px] text-gray-500 font-mono"
           style={{ height: '24px' }}
         >
@@ -417,7 +435,7 @@ const ChronosNode = ({ id, data }: NodeProps<ChronosNodeData>) => {
           exit={{ opacity: 0, x: 10 }}
           className="absolute -right-24 top-0 z-50 w-32 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden"
         >
-          <button 
+          <button
             onClick={handleBranchClick}
             className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 flex items-center gap-2 transition-colors"
           >
