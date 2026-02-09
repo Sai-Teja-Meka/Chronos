@@ -46,10 +46,11 @@ services:
     volumes:
       - ./backend:/app
     environment:
-      PUBLIC_DEMO_MODE: "true"
+      PUBLIC_DEMO_MODE: "false"
       DATABASE_URL: postgresql://chronos_user:chronos_password@db:5432/chronos
       REDIS_URL: redis://chronos-redis:6379
       OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       CHRONOS_API_KEYS: ${CHRONOS_API_KEYS}
       CHRONOS_CORS_ORIGINS: ${CHRONOS_CORS_ORIGINS:-http://localhost:3000,http://localhost:5173}
       CHRONOS_ADMIN_PASSWORD: ${CHRONOS_ADMIN_PASSWORD}

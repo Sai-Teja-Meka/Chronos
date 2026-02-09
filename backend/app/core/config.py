@@ -22,7 +22,9 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
 
     # OPENAI (Added in Phase 4)
-    OPENAI_API_KEY: str = ""
+    DEFAULT_MODEL: str = "gpt-3.5-turbo"
+    ANTHROPIC_API_KEY: str | None = None
+
 
     @model_validator(mode='before')
     @classmethod
