@@ -421,7 +421,7 @@ const TraceViewer: React.FC<TraceViewerProps> = ({ conversationId }) => {
     loadGraph(); // Initial load
 
     // Use environment variable for API URL or default to relative path
-    const apiUrl = import.meta.env?.VITE_API_URL || import.meta.env?.API_ORIGIN || '';
+    const apiUrl = import.meta.env?.VITE_API_URL || '';
     const eventSource = new EventSource(`${apiUrl}/stream/graph/${conversationId}`);
 
     eventSource.onopen = () => {
