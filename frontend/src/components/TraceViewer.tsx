@@ -54,6 +54,7 @@ interface MutationData {
 interface ChronosNodeData {
   sequence: number;
   label?: string;
+  created_at?: string;
   isOnActivePath?: boolean;
   isSelectedForComparison?: boolean;
   onFork?: (nodeId: string) => void;
@@ -108,6 +109,16 @@ const TraceViewer: React.FC<TraceViewerProps> = ({ conversationId }) => {
 
   /* 📡 SSE State */
   const [isConnected, setIsConnected] = useState(false);
+  const MODEL_STORAGE_KEY = "chronos.selectedModel";
+  const DEFAULT_MODEL = "claude-opus-4-5-20251101";
+
+  const [selectedModel, setSelectedModel] = useState<string>(() => {
+    return localStorage.getItem(MODEL_STORAGE_KEY) || DEFAULT_MODEL;
+  });
+
+  useEffect(() => {
+    localStorage.setItem(MODEL_STORAGE_KEY, selectedModel);
+  }, [selectedModel]);
 
   // 🚀 OPTIMIZATION: Memoize nodeTypes to prevent re-renders
   const nodeTypes = useMemo<NodeTypes>(
@@ -139,7 +150,7 @@ const TraceViewer: React.FC<TraceViewerProps> = ({ conversationId }) => {
         content: mutationData.content,
         tool_call_id: mutationData.tool_call_id,
         tool_name: mutationData.tool_name,
-        model: 'gpt-3.5-turbo'
+        model: selectedModel
       });
 
       console.log('Branch created successfully');
@@ -150,7 +161,7 @@ const TraceViewer: React.FC<TraceViewerProps> = ({ conversationId }) => {
       console.error('Fork error:', error);
       alert(`Fork failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-  }, [forkParentId]);
+  }, [forkParentId, selectedModel]);
 
   const calculateActivePath = useCallback(
     (nodeList: ChronosNode[], edgeList: Edge[]) => {
@@ -285,41 +296,41 @@ const TraceViewer: React.FC<TraceViewerProps> = ({ conversationId }) => {
   const getVisibleNodes = useCallback(() => {
     if (!showTimeline) return nodes;
 
+    const visibleIds = new Set(allNodes.slice(0, playbackIndex + 1).map(n => n.id));
+
     return nodes.map((node: ChronosNode) => {
-      const visible = node.data.sequence <= playbackIndex;
+      const visible = visibleIds.has(node.id);
       return {
         ...node,
         hidden: !visible,
         style: {
           ...node.style,
           opacity: visible ? 1 : 0,
-          transition: 'opacity 0.3s ease'
-        }
+          transition: 'opacity 0.3s ease',
+        },
       };
     });
-  }, [nodes, showTimeline, playbackIndex]);
+  }, [nodes, showTimeline, playbackIndex, allNodes]);
+
 
   const getVisibleEdges = useCallback(() => {
     if (!showTimeline) return edges;
 
+    const visibleIds = new Set(allNodes.slice(0, playbackIndex + 1).map(n => n.id));
+
     return edges.map((edge: Edge) => {
-      const sourceNode = nodes.find(n => n.id === edge.source);
-      const targetNode = nodes.find(n => n.id === edge.target);
-
-      const visible =
-        (sourceNode?.data.sequence ?? 0) <= playbackIndex &&
-        (targetNode?.data.sequence ?? 0) <= playbackIndex;
-
+      const visible = visibleIds.has(edge.source) && visibleIds.has(edge.target);
       return {
         ...edge,
         hidden: !visible,
         style: {
           ...edge.style,
-          opacity: visible ? (edge.style?.opacity ?? 1) : 0
-        }
+          opacity: visible ? (edge.style?.opacity ?? 1) : 0,
+        },
       };
     });
-  }, [edges, nodes, showTimeline, playbackIndex]);
+  }, [edges, showTimeline, playbackIndex, allNodes]);
+
 
   const loadGraph = useCallback(async () => {
     try {
@@ -380,9 +391,15 @@ const TraceViewer: React.FC<TraceViewerProps> = ({ conversationId }) => {
       const { nodes: layoutedNodes, edges: layoutedEdges } =
         await getLayoutedElements(enrichedNodes, styledEdges);
 
-      const sorted = [...layoutedNodes].sort(
-        (a, b) => a.data.sequence - b.data.sequence
-      );
+      const sorted = [...layoutedNodes].sort((a, b) => {
+        const ta = a.data.created_at ? Date.parse(a.data.created_at) : Number.POSITIVE_INFINITY;
+        const tb = b.data.created_at ? Date.parse(b.data.created_at) : Number.POSITIVE_INFINITY;
+
+        if (ta !== tb) return ta - tb;
+
+        // tie-breakers for stability
+        return (a.data.sequence ?? 0) - (b.data.sequence ?? 0);
+      });
 
       setAllNodes(sorted);
       setNodes(layoutedNodes);
@@ -628,6 +645,24 @@ const TraceViewer: React.FC<TraceViewerProps> = ({ conversationId }) => {
         onSubmit={handleForkSubmit}
         parentEventId={forkParentId}
       />
+
+      <div className="absolute top-4 right-56 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg px-3 py-2 text-xs z-10">
+        <div className="text-gray-500 mb-1">Model</div>
+        <select
+          value={selectedModel}
+          onChange={(e) => setSelectedModel(e.target.value)}
+          className="bg-transparent text-gray-800 font-semibold outline-none"
+        >
+          <option value="claude-haiku-4-5-20251001">claude-haiku-4-5-20251001</option>
+          <option value="claude-sonnet-4-5-20250929">claude-sonnet-4-5-20250929</option>
+          <option value="claude-opus-4-5-20251101">claude-opus-4-5-20251101</option>
+          <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
+          <option value="gpt-4.1-nano">gpt-4.1-nano</option>
+          <option value="gpt-4.1-mini">gpt-4.1-mini</option>
+          <option value="gpt-4.1">gpt-4.1</option>
+
+        </select>
+      </div>
 
       <ArenaView
         isOpen={isArenaOpen}

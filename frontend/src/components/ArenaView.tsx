@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { X, TrendingDown, TrendingUp, Download, Trophy, Zap, DollarSign, Clock, AlertTriangle } from 'lucide-react';
+import { X, Download, Trophy, Zap, DollarSign, Clock, AlertTriangle } from 'lucide-react';
 import type { Node } from 'reactflow';
 
 interface BranchMetrics {
     branchId: string;
     branchName: string;
     tipNodeId: string;
+    model: string;
 
     // Core metrics
     totalSteps: number;
@@ -37,7 +38,6 @@ const ArenaView: React.FC<ArenaViewProps> = ({
     isOpen,
     onClose,
     branches,
-    nodes,
     onFocusBranch
 }) => {
     // 1. HOOKS ALWAYS COME FIRST (Unconditionally)
@@ -89,6 +89,7 @@ const ArenaView: React.FC<ArenaViewProps> = ({
                     metrics: {
                         steps: b.totalSteps,
                         tokens: b.totalTokens,
+                        model: b.model,
                         latency: `${b.totalLatency}ms`,
                         cost: `$${b.estimatedCost.toFixed(4)}`,
                         hasErrors: b.hasErrors,
@@ -106,9 +107,9 @@ const ArenaView: React.FC<ArenaViewProps> = ({
             URL.revokeObjectURL(url);
         } else {
             // CSV format
-            const headers = ['Branch,Steps,Tokens,Latency (ms),Cost ($),Has Errors,Completion Rate (%)'];
+            const headers = ['Branch,Model,Steps,Tokens,Latency (ms),Cost ($),Has Errors,Completion Rate (%)'];
             const rows = branches.map(b =>
-                `${b.branchName},${b.totalSteps},${b.totalTokens},${b.totalLatency},${b.estimatedCost.toFixed(4)},${b.hasErrors},${(b.completionRate * 100).toFixed(1)}`
+                `${b.branchName},${b.model},${b.totalSteps},${b.totalTokens},${b.totalLatency},${b.estimatedCost.toFixed(4)},${b.hasErrors},${(b.completionRate * 100).toFixed(1)}`
             );
 
             const csv = [headers, ...rows].join('\n');
@@ -284,6 +285,8 @@ const ArenaView: React.FC<ArenaViewProps> = ({
                                             <div className="text-xs text-gray-500">{branch.totalSteps} steps</div>
                                         </div>
                                     </div>
+                                    <div className="text-xs text-gray-500">{branch.model} • {branch.totalSteps} steps</div>
+
 
                                     {/* Status Badge */}
                                     <div className={`px-3 py-1 rounded-full text-xs font-semibold ${branch.hasErrors

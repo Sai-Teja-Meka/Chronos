@@ -9,6 +9,8 @@ export interface BranchMetrics {
     branchId: string;
     branchName: string;
     tipNodeId: string;
+    model: string;
+
 
     // Core metrics
     totalSteps: number;
@@ -34,19 +36,43 @@ export interface BranchMetrics {
  * Output: $0.0015 per 1K tokens
  */
 const PRICING = {
-    'gpt-3.5-turbo': {
-        input: 0.0005 / 1000,   // per token
-        output: 0.0015 / 1000,  // per token
+    'gpt-3.5-turbo': { input: 0.0005 / 1000, output: 0.0015 / 1000 },
+
+    // Claude Sonnet 4.5
+    'claude-sonnet-4-5-20250929': {
+        input: 3 / 1_000_000,
+        output: 15 / 1_000_000,
     },
-    'gpt-4': {
-        input: 0.03 / 1000,
-        output: 0.06 / 1000,
+
+    // Claude Haiku 4.5
+    'claude-haiku-4-5-20251001': {
+        input: 1 / 1_000_000,
+        output: 5 / 1_000_000,
     },
-    'claude-3-sonnet': {
-        input: 0.003 / 1000,
-        output: 0.015 / 1000,
-    }
+
+    // Claude Opus 4.5
+    'claude-opus-4-5-20251101': {
+        input: 5 / 1_000_000,
+        output: 25 / 1_000_000,
+    },
+
+    // OpenAI GPT-4.1 family
+    'gpt-4.1': {
+        input: 3 / 1_000_000,
+        output: 12 / 1_000_000,
+    },
+
+    'gpt-4.1-mini': {
+        input: 0.8 / 1_000_000,
+        output: 3.2 / 1_000_000,
+    },
+
+    'gpt-4.1-nano': {
+        input: 0.2 / 1_000_000,
+        output: 0.8 / 1_000_000,
+    },
 };
+
 
 /**
  * Traces a branch from tip node back to root
@@ -92,6 +118,7 @@ export function calculateBranchMetrics(
     let toolResults = 0;
     let errors = 0;
     let completedSteps = 0;
+    let branchModel: string | null = null;
 
     // Calculate metrics
     branchNodes.forEach(node => {
@@ -108,6 +135,9 @@ export function calculateBranchMetrics(
 
         // Aggregate tokens
         if (metadata) {
+            if (!branchModel && metadata['gen_ai.model']) {
+                branchModel = metadata['gen_ai.model'];
+            }
             const inputTokens = metadata['gen_ai.usage.input_tokens'] || 0;
             const outputTokens = metadata['gen_ai.usage.output_tokens'] || 0;
 
@@ -127,11 +157,13 @@ export function calculateBranchMetrics(
     });
 
     // Estimate cost (assuming GPT-3.5 Turbo for now)
-    const model = 'gpt-3.5-turbo';
-    const pricing = PRICING[model];
+    const model = branchModel || 'gpt-3.5-turbo';
+    const pricing = (PRICING as any)[model] || PRICING['gpt-3.5-turbo'];
+
     const estimatedCost =
         (totalInputTokens * pricing.input) +
         (totalOutputTokens * pricing.output);
+
 
     // Completion rate
     const completionRate = branchNodes.length > 0
@@ -158,7 +190,8 @@ export function calculateBranchMetrics(
         assistantMessages,
         toolCalls,
         toolResults,
-        errors
+        errors,
+        model: branchModel || 'unknown',
     };
 }
 
