@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/img/chronos-demo.gif" alt="Chronos Demo" width="20%" />
+  <img src="docs/img/chronos-demo.gif" alt="Chronos Demo" width="33%" />
   <br><br>
 </p>
 
@@ -549,5 +549,6 @@ Built with:
 <p align="center">
   <a href="https://github.com/Sai-Teja-Meka/Chronos" target="_blank">⭐ Star us on GitHub</a>
 </p>
+
 
 
