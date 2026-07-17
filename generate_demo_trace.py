@@ -1,8 +1,13 @@
 import os
+import sys
 import requests
 import json
 from uuid import uuid4
 from datetime import datetime, timedelta
+
+# Windows consoles may default to cp1252, which cannot print the emoji below.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 # Defaults target the local docker-compose stack; override via environment.
 API_BASE = os.getenv("CHRONOS_API_BASE", "http://localhost:8000")
