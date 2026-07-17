@@ -28,7 +28,9 @@ class ReplayEngine:
         if snapshot:
             # [Existing Snapshot Logic - Unchanged]
             logger.info(f"Using snapshot from event {snapshot['event_id']}")
-            messages_state = json.loads(snapshot['state_datum'])
+            # psycopg2 decodes JSONB to Python objects; only parse if a string
+            raw_state = snapshot['state_datum']
+            messages_state = raw_state if isinstance(raw_state, list) else json.loads(raw_state)
             snapshot_event_id = snapshot['event_id']
             delta_events = self._fetch_events_after_snapshot(snapshot_event_id, target_event_id)
             for event in delta_events:
