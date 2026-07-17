@@ -1,11 +1,12 @@
+import os
 import requests
 import json
 from uuid import uuid4
 from datetime import datetime, timedelta
 
-# Your AWS backend
-API_BASE = "https://chronos.rayray.hk"
-API_KEY = "chronos_demo_key_12345"
+# Defaults target the local docker-compose stack; override via environment.
+API_BASE = os.getenv("CHRONOS_API_BASE", "http://localhost:8000")
+API_KEY = os.getenv("CHRONOS_API_KEY", "chronos_demo_key_12345")
 
 # Generate conversation ID
 conv_id = str(uuid4())
@@ -127,7 +128,7 @@ try:
     if response.status_code == 201:
         print(f"✅ Demo trace created successfully!")
         print(f"📊 {response.json()}")
-        print(f"\n🔗 View in UI: https://chronos-chi-eight.vercel.app")
+        print(f"\n🔗 View in UI: http://localhost:5173 (paste the conversation ID)")
         print(f"🔗 Conversation ID: {conv_id}")
     else:
         print(f"❌ Failed: {response.status_code}")
