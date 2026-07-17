@@ -111,7 +111,7 @@ The fastest way to get Chronos running locally:
    python generate_demo_trace.py
 ```
 
-   This creates a sample conversation with branches. Copy the conversation ID and paste it into the frontend.
+   This creates a sample conversation with branches. Copy the printed conversation ID and set `DEMO_CONVERSATION_ID` in `frontend/src/App.tsx` to view it (there is currently no in-UI input for the ID).
 
 ---
 
@@ -512,6 +512,8 @@ Apply manually or via Docker entrypoint on first run.
 ## ⚠️ Known Limitations
 
 - Snapshot interval placement is branch-naive on heavily-forked conversations — snapshots remain correct, but their placement is suboptimal.
+- The auto-snapshot trigger over-creates placeholder rows on batch inserts (one per row whenever a batch lands on a multiple of 50). Placeholders are never used as a replay base, so this is harmless, but the snapshots table can grow larger than expected.
+- The `/trace` response counts (`inserted`/`duplicates`) are inaccurate for batches larger than 100 events due to psycopg2 `execute_values` paging; all events are still inserted correctly.
 
 ---
 
