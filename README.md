@@ -507,19 +507,8 @@ Apply manually or via Docker entrypoint on first run.
 
 ---
 
-## 📚 Documentation
-
-- [API Documentation](https://github.com/Sai-Teja-Meka/Chronos/wiki/API-Reference)
-- [Architecture Deep Dive](https://github.com/Sai-Teja-Meka/Chronos/wiki/Architecture)
-- [SDK Guide](https://github.com/Sai-Teja-Meka/Chronos/wiki/Python-SDK)
-- [Deployment Guide](https://github.com/Sai-Teja-Meka/Chronos/wiki/Deployment)
-- [Contributing](./CONTRIBUTING.md)
-
----
-
 ## 🤝 Community & Support
 
-- [📖 GitHub Wiki](https://github.com/Sai-Teja-Meka/Chronos/wiki)
 - [🐛 Report Issues](https://github.com/Sai-Teja-Meka/Chronos/issues)
 - [💬 Discussions](https://github.com/Sai-Teja-Meka/Chronos/discussions)
 
