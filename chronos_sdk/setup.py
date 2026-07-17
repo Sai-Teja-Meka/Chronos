@@ -4,7 +4,7 @@ setup(
     name="chronos_sdk",
     version="0.1.0",
     description="The Transparent Interceptor SDK for Project Chronos",
-    author="Project Chronos Architect",
+    author="Sai Teja Meka",
     packages=find_packages(),  # Automatically finds 'chronos' package
     python_requires=">=3.8",
     install_requires=[

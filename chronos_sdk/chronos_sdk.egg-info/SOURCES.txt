@@ -1,8 +1,0 @@
-README.md
-setup.py
-chronos/__init__.py
-chronos/interceptor.py
-chronos_sdk.egg-info/PKG-INFO
-chronos_sdk.egg-info/SOURCES.txt
-chronos_sdk.egg-info/dependency_links.txt
-chronos_sdk.egg-info/top_level.txt
