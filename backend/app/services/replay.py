@@ -187,6 +187,10 @@ class ReplayEngine:
         WHERE e.event_id = ANY(
             SELECT unnest(path) FROM events WHERE event_id = %s
         )
+        -- Never use an unpopulated placeholder (state '[]') as a replay base:
+        -- the auto-snapshot trigger inserts empty placeholders that would
+        -- silently produce wrong (empty-prefix) state until populated.
+        AND s.state_datum <> '[]'::jsonb
         ORDER BY s.event_count DESC
         LIMIT 1
         """
