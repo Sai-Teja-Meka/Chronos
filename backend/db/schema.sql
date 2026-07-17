@@ -77,10 +77,13 @@ CREATE INDEX idx_events_parent_event_id ON events(parent_event_id);
 CREATE INDEX idx_events_parent_sequence ON events(parent_event_id, sequence_number);
 
 -- B. JSONB Content (OTel Specifics)
+-- BTREE expression indexes: text has no default GIN operator class, and a
+-- failing CREATE INDEX here aborts the whole docker-entrypoint init chain
+-- (see fix_indexes.sql, which documents the same GIN->BTREE fix).
 -- Accelerates "Find all tool executions" or "Find all errors"
-CREATE INDEX idx_events_payload_operation ON events USING GIN ((payload ->> 'gen_ai.operation.name'));
+CREATE INDEX idx_events_payload_operation ON events ((payload ->> 'gen_ai.operation.name'));
 -- Accelerates "Find usage patterns of specific tools" (Phase 6 Pattern Detection)
-CREATE INDEX idx_events_payload_tool_name ON events USING GIN ((payload ->> 'gen_ai.tool.name'));
+CREATE INDEX idx_events_payload_tool_name ON events ((payload ->> 'gen_ai.tool.name'));
 
 -- C. Optimization
 -- Accelerates "Fetch full lineage" using the Materialized Path (Phase 7)
