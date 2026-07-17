@@ -248,7 +248,9 @@ messages = engine.fold_state(target_event_id="event-uuid")
 **Snapshot Optimization:**
 - Snapshots created every N events (default: 50)
 - O(1) lookup via materialized path arrays
-- Sub-200ms replay even for 1000+ event conversations
+- Sub-200ms replay even for 1000+ event conversations (measured on a
+  1,050-event conversation: 29ms median via snapshots, 34ms median full
+  traversal; 5 runs each, Docker Desktop on an i7-1250U / 16 GB RAM)
 
 ### 3. Advanced Branching
 
