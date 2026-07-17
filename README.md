@@ -36,7 +36,7 @@ Below are some of the powerful debugging and development workflows enabled by Ch
 - **Time-Travel Replay** – Reconstruct conversation state at any point with snapshot optimization
 - **Advanced Branching** – Fork conversations with user/system/assistant/tool mutations
 - **Interactive Visualization** – ReactFlow-based graph UI with timeline playback and diff tools
-- **Multi-Provider Support** – Works with OpenAI and Anthropic (Claude) models
+- **Multi-Provider Branching** – Multi-provider branching (OpenAI + Anthropic); SDK capture currently supports OpenAI
 - **Production-Ready Security** – API key auth, rate limiting, input validation, audit logging
 - **Python SDK** – Context-aware interceptor with thread-safe design
 
@@ -504,6 +504,12 @@ Apply manually or via Docker entrypoint on first run.
 | OpenAI | Anthropic (Claude) |
 |:------:|:------------------:|
 | ✅ GPT-3.5, GPT-4, GPT-4o | ✅ Haiku, Sonnet, Opus |
+
+---
+
+## ⚠️ Known Limitations
+
+- Snapshot interval placement is branch-naive on heavily-forked conversations — snapshots remain correct, but their placement is suboptimal.
 
 ---
 

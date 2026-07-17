@@ -401,17 +401,23 @@ class BranchingService:
             tokens = 0
             latency = 0.0
             for event in lineage:
-                meta = event.get('metadata', {})
+                meta = event.get('metadata', {}) or {}
                 # FIX: Use correct metadata key
                 latency += meta.get('latency_ms', 0) or 0
-                
-                # Token counting from payload instead of metadata
+
+                # Prefer real usage recorded on fork-generated events
+                usage_in = meta.get('gen_ai.usage.input_tokens', 0) or 0
+                usage_out = meta.get('gen_ai.usage.output_tokens', 0) or 0
+                if usage_in or usage_out:
+                    tokens += usage_in + usage_out
+                    continue
+
+                # Fallback: rough token estimate (~4 chars per token)
                 payload = event.get('payload', {})
                 output_msgs = payload.get('gen_ai.output.messages', [])
                 for msg in output_msgs:
                     for part in msg.get('parts', []):
                         if part.get('type') == 'text' and part.get('text'):
-                            # Rough token estimate: ~4 chars per token
                             tokens += len(part['text']) // 4
             
             return {"tokens": tokens, "latency": latency, "steps": len(lineage)}
