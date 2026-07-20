@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/img/Chronos-demo.gif" alt="Chronos Demo" width="33%" />
+  <img src="docs/img/chronos-graph.png" alt="Chronos interactive DAG view: an LLM conversation as a graph of color-coded events (user, assistant, tool call/result) with the active path highlighted in cyan and two alternative forked branches" width="90%" />
   <br><br>
 </p>
 
@@ -274,6 +274,10 @@ requests.post(
 - `assistant_message` – Force specific response (no LLM call)
 - `tool_result` – Simulate tool execution outcome
 
+<p align="center">
+  <img src="docs/img/chronos-fork.png" alt="Chronos fork modal: 'Advanced Branch Mutation' dialog for creating a what-if branch, with User / System / Assistant / Tool Result mutation-type options and a message content field" width="80%" />
+</p>
+
 ### 4. Branch Comparison
 
 Compare two timeline branches:
@@ -291,6 +295,10 @@ response = requests.get(
 #   "diff": {"token_delta": -250, "latency_delta_ms": -600}
 # }
 ```
+
+<p align="center">
+  <img src="docs/img/chronos-compare.png" alt="Chronos branch comparison view: two forked timelines side by side showing their divergence point and per-branch token and latency deltas" width="90%" />
+</p>
 
 ### 5. Live Updates (SSE)
 
